@@ -29,17 +29,14 @@ if (!config.FB_APP_SECRET) {
 if (!config.SERVER_URL) { //used for ink to static files
 	throw new Error('missing SERVER_URL');
 }
-if (!config.SENGRID_API_KEY) { //sending email
-	throw new Error('missing SENGRID_API_KEY');
+if (!config.SENDGRID_API_KEY) { //sending email
+    throw new Error('missing SENDGRID_API_KEY');
 }
 if (!config.EMAIL_FROM) { //sending email
-	throw new Error('missing EMAIL_FROM');
+    throw new Error('missing EMAIL_FROM');
 }
 if (!config.EMAIL_TO) { //sending email
-	throw new Error('missing EMAIL_TO');
-}
-if (!config.WEATHER_API_KEY) { //weather api key
-	throw new Error('missing WEATHER_API_KEY');
+    throw new Error('missing EMAIL_TO');
 }
 
 
@@ -90,7 +87,7 @@ app.get('/webhook/', function (req, res) {
 /*
  * All callbacks for Messenger are POST-ed. They will be sent to the same
  * webhook. Be sure to subscribe your app to your page to receive callbacks
- * for your page.
+ * for your page. 
  * https://developers.facebook.com/docs/messenger-platform/product-overview/setup#subscribe_app
  *
  */
@@ -134,19 +131,18 @@ app.post('/webhook/', function (req, res) {
 	}
 });
 
-
 function setSessionAndUser(senderID) {
-	if (!sessionIds.has(senderID)) {
+	if (!sessionIds.has(senderID)){
 		sessionIds.set(senderID, uuid.v1());
 	}
 
 	if (!usersMap.has(senderID)) {
 		userData( function (user) {
 			usersMap.set(senderID, user);
-		}, senderID);
+        }, senderID);
 	}
+	
 }
-
 
 
 function receivedMessage(event) {
@@ -157,10 +153,10 @@ function receivedMessage(event) {
 	var message = event.message;
 
 
+    setSessionAndUser(senderID);
 
-	setSessionAndUser(senderID);
-	// console.log("Received message for user %d and page %d at %d with message:", senderID, recipientID, timeOfMessage);
-	// console.log(JSON.stringify(message));
+    //console.log("Received message for user %d and page %d at %d with message:", senderID, recipientID, timeOfMessage);
+	//console.log(JSON.stringify(message));
 
 	var isEcho = message.is_echo;
 	var messageId = message.mid;
@@ -192,7 +188,7 @@ function receivedMessage(event) {
 
 function handleMessageAttachments(messageAttachments, senderID){
 	//for now just reply
-	sendTextMessage(senderID, "Attachment received. Thank you.");
+	sendTextMessage(senderID, "Attachment received. Thank you.");	
 }
 
 function handleQuickReply(senderID, quickReply, messageId) {
@@ -210,140 +206,38 @@ function handleEcho(messageId, appId, metadata) {
 
 function handleApiAiAction(sender, action, responseText, contexts, parameters) {
 	switch (action) {
-		case "get-current-weather":
-			if (parameters.hasOwnProperty("geo-city") && parameters["geo-city"]!='') {
-
-				var request = require('request');
-
-				request({
-					url: 'http://api.openweathermap.org/data/2.5/weather', //URL to hit
-					qs: {
-						appid: config.WEATHER_API_KEY,
-						q: parameters["geo-city"]
-					}, //Query string data
-				}, function(error, response, body){
-					if(!error && response.statusCode == 200) {
-						let weather = JSON.parse(body);
-						if (weather.hasOwnProperty("weather")) {
-							let reply = `${responseText} ${weather["weather"][0]["description"]}`;
-							sendTextMessage(sender, reply);
-						} else {
-							sendTextMessage(sender,
-								`No weather forecast available for ${parameters["geo-city"]}`);
-						}
-					} else {
-						console.error(response.error);
-					}
-				});
-			} else {
-				sendTextMessage(sender, responseText);
-			}
-			break;
-		case "faq-delivery":
-			sendTextMessage(sender, responseText);
-			sendTypingOn(sender);
-
-			//ask what user wants to do next
-			setTimeout(function() {
-				let buttons = [
-					{
-						type:"web_url",
-						url:"https://www.myapple.com/track_order",
-						title:"Track my order"
-					},
-					{
-						type:"phone_number",
-						title:"Call us",
-						payload:"+16505551234",
-					},
-					{
-						type:"postback",
-						title:"Keep on Chatting",
-						payload:"CHAT"
-					}
-				];
-
-				sendButtonMessage(sender, "What would you like to do next?", buttons);
-			}, 3000)
-
-
-			break;
 		case "detailed-application":
-			if (isDefined(contexts[0]) &&
-				(contexts[0].name == 'job_application' || contexts[0].name == 'job-application-details_dialog_context')
-				&& contexts[0].parameters) {
+			if (isDefined(contexts[0]) && contexts[0].name == 'job_application' && contexts[0].parameters){
 				let phone_number = (isDefined(contexts[0].parameters['phone-number'])
 				&& contexts[0].parameters['phone-number']!= '') ? contexts[0].parameters['phone-number'] : '';
-				let user_name = (isDefined(contexts[0].parameters['user-name'])
-				&& contexts[0].parameters['user-name']!= '') ? contexts[0].parameters['user-name'] : '';
-				let previous_job = (isDefined(contexts[0].parameters['previous-job'])
+                let user_name = (isDefined(contexts[0].parameters['user-name'])
+				&& contexts[0].parameters['user-name']!= '') ? contexts[0].parameters['user-name']: '';
+                let previous_job = (isDefined(contexts[0].parameters['previous-job'])
 				&& contexts[0].parameters['previous-job']!= '') ? contexts[0].parameters['previous-job'] : '';
-				let years_of_experience = (isDefined(contexts[0].parameters['years-of-experience'])
+                let years_of_experience = (isDefined(contexts[0].parameters['years-of-experience'])
 				&& contexts[0].parameters['years-of-experience']!= '') ? contexts[0].parameters['years-of-experience'] : '';
-				let job_vacancy = (isDefined(contexts[0].parameters['job-vacancy'])
+                let job_vacancy = (isDefined(contexts[0].parameters['job-vacancy'])
 				&& contexts[0].parameters['job-vacancy']!= '') ? contexts[0].parameters['job-vacancy'] : '';
 
-				if (phone_number == '' && user_name != '' && previous_job != '' && years_of_experience == '') {
-					let replies = [
-						{
-							"content_type":"text",
-							"title":"Less than 1 year",
-							"payload":"Less than 1 year"
-						},
-						{
-							"content_type":"text",
-							"title":"Less than 10 year",
-							"payload":"Less than 10 year"
-						},
-						{
-							"content_type":"text",
-							"title":"More than 10 years",
-							"payload":"More than 10 years"
-						}
-					];
-					sendQuickReply(sender, responseText, replies);
-				} else if (phone_number != '' && user_name != '' && previous_job != '' && years_of_experience != ''
-					&& job_vacancy != '') {
-					let emailContent = 'A new job enquiery from ' + user_name + ' for the job: ' + job_vacancy +
-						'.<br> Previous job position: ' + previous_job + '.' +
-						'.<br> Years of experience: ' + years_of_experience + '.' +
-						'.<br> Phone number: ' + phone_number + '.';
+                if (phone_number != '' && user_name != '' && previous_job != '' && years_of_experience != '' && job_vacancy != '') {
+                	let emailContent = 'A new job inquiry from ' + user_name + ' for the job ' + job_vacancy +
+							'.<br> Previous job position: ' + previous_job +
+							'.<br> Years of experience: ' + years_of_experience +
+							'.<br> Phone number: ' + phone_number + '.';
 
-					sendEmail('New job application', emailContent);
-					sendTextMessage(sender, responseText);
-				} else {
-					sendTextMessage(sender, responseText);
-				}
-			}
+                	sendEmail('New job application', emailContent);
 
-			break;
-		case "job-enquiry":
-			let replies = [
-				{
-					"content_type":"text",
-					"title":"Accountant",
-					"payload":"Accountant"
-				},
-				{
-					"content_type":"text",
-					"title":"Sales",
-					"payload":"Sales"
-				},
-				{
-					"content_type":"text",
-					"title":"Not interested",
-					"payload":"Not interested"
 				}
-			];
-			sendQuickReply(sender, responseText, replies);
-			break;
+
+            }
+            sendTextMessage(sender, responseText);
+            break;
 		default:
 			//unhandled action, just send back the text
-			//console.log("send responce in handle actiongit: " + responseText);
 			sendTextMessage(sender, responseText);
+			break;
 	}
 }
-
 
 function handleMessage(message, sender) {
 	switch (message.type) {
@@ -375,12 +269,13 @@ function handleMessage(message, sender) {
 				message: message.payload.facebook
 
 			};
-			console.log('custom payload');
+
 			callSendAPI(messageData);
 
 			break;
 	}
 }
+
 
 function handleCardMessages(messages, sender) {
 
@@ -419,6 +314,7 @@ function handleCardMessages(messages, sender) {
 	sendGenericMessage(sender, elements);
 }
 
+
 function handleApiAiResponse(sender, response) {
 	let responseText = response.result.fulfillment.speech;
 	let responseData = response.result.fulfillment.data;
@@ -428,9 +324,9 @@ function handleApiAiResponse(sender, response) {
 	let parameters = response.result.parameters;
 
 	sendTypingOff(sender);
-	console.log('SAMPLE');
+    console.log('SAMPLE'); //Leo added from final code
 	if (isDefined(messages) && (messages.length == 1 && messages[0].type != 0 || messages.length > 1)) {
-		console.log('STUFF');
+        console.log('STUFF'); //Leo added from final code
 		let timeoutInterval = 1100;
 		let previousType ;
 		let cardTypes = [];
@@ -468,7 +364,7 @@ function handleApiAiResponse(sender, response) {
 			sendTextMessage(sender, err.message);
 		}
 	} else if (isDefined(responseText)) {
-		console.log('Respond as text message');
+
 		sendTextMessage(sender, responseText);
 	}
 }
@@ -717,7 +613,6 @@ function sendQuickReply(recipientId, text, replies, metadata) {
  *
  */
 function sendReadReceipt(recipientId) {
-	console.log("Sending a read receipt to mark message as seen");
 
 	var messageData = {
 		recipient: {
@@ -734,7 +629,7 @@ function sendReadReceipt(recipientId) {
  *
  */
 function sendTypingOn(recipientId) {
-	console.log("Turning typing indicator on");
+
 
 	var messageData = {
 		recipient: {
@@ -751,7 +646,7 @@ function sendTypingOn(recipientId) {
  *
  */
 function sendTypingOff(recipientId) {
-	console.log("Turning typing indicator off");
+
 
 	var messageData = {
 		recipient: {
@@ -781,7 +676,7 @@ function sendAccountLinking(recipientId) {
 					buttons: [{
 						type: "account_link",
 						url: config.SERVER_URL + "/authorize"
-					}]
+          }]
 				}
 			}
 		}
@@ -795,60 +690,64 @@ function greetUserText(userId) {
 
 	let user = usersMap.get(userId);
 	sendTextMessage(userId, "Welcome " + user.first_name + '! ' +
-		'I can answer frequently asked questions for you ' +
-		'and I perform job interviews. What can I help you with?');
+	'I can answer frequently asked questions for you' +
+	'and I perform job interviews. What can I help you with?');
+
+
 }
+
 
 /*
  * Call the Send API. The message data goes in the body. If successful, we'll
  * get the message id in a response
  *
  */
+
+
 function callSendAPI(messageData) {
-	request({
-		uri: 'https://graph.facebook.com/v2.6/me/messages',
-		qs: {
-			access_token: config.FB_PAGE_TOKEN
-		},
-		method: 'POST',
-		json: messageData
+    request({
+        uri: 'https://graph.facebook.com/v2.6/me/messages',
+        qs: {
+            access_token: config.FB_PAGE_TOKEN
+        },
+        method: 'POST',
+        json: messageData
 
-	}, function (error, response, body) {
-		if (!error && response.statusCode == 200) {
-			var recipientId = body.recipient_id;
-			var messageId = body.message_id;
+    }, function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+            var recipientId = body.recipient_id;
+            var messageId = body.message_id;
 
-			if (messageId) {
-				console.log("Successfully sent message with id %s to recipient %s",
-					messageId, recipientId);
-			} else {
-				console.log("Successfully called Send API for recipient %s",
-					recipientId);
-			}
-		} else {
-			console.error("Failed calling Send API", response.statusCode, response.statusMessage, body.error);
-		}
-	});
+            if (messageId) {
+                console.log("Successfully sent message with id %s to recipient %s",
+                    messageId, recipientId);
+            } else {
+                console.log("Successfully called Send API for recipient %s",
+                    recipientId);
+            }
+        } else {
+            console.error("Failed calling Send API", response.statusCode, response.statusMessage, body.error);
+        }
+    });
 }
-
 
 
 /*
  * Postback Event
  *
- * This event is called when a postback is tapped on a Structured Message.
+ * This event is called when a postback is tapped on a Structured Message. 
  * https://developers.facebook.com/docs/messenger-platform/webhook-reference/postback-received
- *
+ * 
  */
 function receivedPostback(event) {
 	var senderID = event.sender.id;
 	var recipientID = event.recipient.id;
 	var timeOfPostback = event.timestamp;
 
-	setSessionAndUser(senderID);
+    setSessionAndUser(senderID);
 
-	// The 'payload' param is a developer-defined field which is set in a postback
-	// button for Structured Messages.
+    // The 'payload' param is a developer-defined field which is set in a postback
+	// button for Structured Messages. 
 	var payload = event.postback.payload;
 
 	switch (payload) {
@@ -859,17 +758,13 @@ function receivedPostback(event) {
 			//get feedback with new jobs
 			sendToApiAi(senderID, "job openings");
 			break;
-		case 'CHAT':
-			//user wants to chat
-			sendTextMessage(senderID, "I love chatting too. Do you have any other questions for me?");
-			break;
 		default:
 			//unindentified payload
 			sendTextMessage(senderID, "I'm not sure what you want. Can you be more specific?");
 			break;
 
 	}
-	console.log("payload" + payload);
+    console.log("payload" + payload);
 	console.log("Received postback for user %d and page %d with payload '%s' " +
 		"at %d", senderID, recipientID, payload, timeOfPostback);
 
@@ -881,7 +776,7 @@ function receivedPostback(event) {
  *
  * This event is called when a previously-sent message has been read.
  * https://developers.facebook.com/docs/messenger-platform/webhook-reference/message-read
- *
+ * 
  */
 function receivedMessageRead(event) {
 	var senderID = event.sender.id;
@@ -901,7 +796,7 @@ function receivedMessageRead(event) {
  * This event is called when the Link Account or UnLink Account action has been
  * tapped.
  * https://developers.facebook.com/docs/messenger-platform/webhook-reference/account-linking
- *
+ * 
  */
 function receivedAccountLink(event) {
 	var senderID = event.sender.id;
@@ -917,7 +812,7 @@ function receivedAccountLink(event) {
 /*
  * Delivery Confirmation Event
  *
- * This event is sent to confirm the delivery of a message. Read more about
+ * This event is sent to confirm the delivery of a message. Read more about 
  * these fields at https://developers.facebook.com/docs/messenger-platform/webhook-reference/message-delivered
  *
  */
@@ -942,8 +837,8 @@ function receivedDeliveryConfirmation(event) {
 /*
  * Authorization Event
  *
- * The value for 'optin.ref' is defined in the entry point. For the "Send to
- * Messenger" plugin, it is the 'data-ref' field. Read more at
+ * The value for 'optin.ref' is defined in the entry point. For the "Send to 
+ * Messenger" plugin, it is the 'data-ref' field. Read more at 
  * https://developers.facebook.com/docs/messenger-platform/webhook-reference/authentication
  *
  */
@@ -953,9 +848,9 @@ function receivedAuthentication(event) {
 	var timeOfAuth = event.timestamp;
 
 	// The 'ref' field is set in the 'Send to Messenger' plugin, in the 'data-ref'
-	// The developer can set this to an arbitrary value to associate the
+	// The developer can set this to an arbitrary value to associate the 
 	// authentication callback with the 'Send to Messenger' click event. This is
-	// a way to do account linking when the user clicks the 'Send to Messenger'
+	// a way to do account linking when the user clicks the 'Send to Messenger' 
 	// plugin.
 	var passThroughParam = event.optin.ref;
 
@@ -969,8 +864,8 @@ function receivedAuthentication(event) {
 }
 
 /*
- * Verify that the callback came from Facebook. Using the App Secret from
- * the App Dashboard, we can verify the signature that is sent with each
+ * Verify that the callback came from Facebook. Using the App Secret from 
+ * the App Dashboard, we can verify the signature that is sent with each 
  * callback in the x-hub-signature field, located in the header.
  *
  * https://developers.facebook.com/docs/graph-api/webhooks#setup
@@ -996,27 +891,28 @@ function verifyRequestSignature(req, res, buf) {
 	}
 }
 
-function sendEmail(subject, content) {
-	var helper = require('sendgrid').mail;
+function sendEmail (subject, content){
+    var helper = require('sendgrid').mail;
 
-	var from_email = new helper.Email(config.EMAIL_FROM);
-	var to_email = new helper.Email(config.EMAIL_TO);
-	var subject = subject;
-	var content = new helper.Content("text/html", content);
-	var mail = new helper.Mail(from_email, subject, to_email, content);
+    var from_email = new helper.Email(config.EMAIL_FROM);
+    var to_email = new helper.Email(config.EMAIL_TO);
+    var subject = subject;
+    var content = new helper.Content("text/html", content);
+    var mail = new helper.Mail(from_email, subject, to_email, content);
 
-	var sg = require('sendgrid')(config.SENGRID_API_KEY);
-	var request = sg.emptyRequest({
-		method: 'POST',
-		path: '/v3/mail/send',
-		body: mail.toJSON()
-	});
+    var sg = require('sendgrid')(config.SENDGRID_API_KEY);
+    var request = sg.emptyRequest({
+        method: 'POST',
+        path: '/v3/mail/send',
+        body: mail.toJSON()
+    });
 
-	sg.API(request, function(error, response) {
-		console.log(response.statusCode)
-		console.log(response.body)
-		console.log(response.headers)
-	})
+    sg.API(request, function(error, response) {
+        console.log(response.statusCode);
+        console.log(response.body);
+        console.log(response.headers);
+    })
+	
 }
 
 function isDefined(obj) {
@@ -1035,3 +931,5 @@ function isDefined(obj) {
 app.listen(app.get('port'), function () {
 	console.log('running on port', app.get('port'))
 })
+
+
